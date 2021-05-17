@@ -18,11 +18,14 @@ utils_ops.tf = tf.compat.v1
 # Patch the location of gfile
 tf.gfile = tf.io.gfile
 
+# パラメータ
+LABEL_FILE  = sys.argv[1]
+FROZEN_FILE = sys.argv[2]
+JPEG_FILE   = sys.argv[3]
+
 # パラメータ設定
-# PATH_TO_LABELS = 'mscoco_label_map.pbtxt'
-# PATH_TO_FROZEN_GRAPH = "./ssd_mobilenet_v2_coco_2018_03_29/frozen_inference_graph.pb"
-PATH_TO_LABELS = '../inference/label_map.pbtxt'
-PATH_TO_FROZEN_GRAPH = "../inference/frozen_inference_graph.pb"
+PATH_TO_LABELS = LABEL_FILE
+PATH_TO_FROZEN_GRAPH = FROZEN_FILE
 
 # ラベルマップのロード
 category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABELS, use_display_name=True)
@@ -31,7 +34,7 @@ category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABE
 # Load a (frozen) Tensorflow model into memory.
 detection_graph = tf.Graph()
 with detection_graph.as_default():
-  od_graph_def = tf.GraphDef()
+  od_graph_def = tf.compat.v1.GraphDef()
   with tf.gfile.GFile(PATH_TO_FROZEN_GRAPH, 'rb') as fid:
     serialized_graph = fid.read()
     od_graph_def.ParseFromString(serialized_graph)
@@ -46,9 +49,9 @@ def load_image_into_numpy_array(image):
 
 def run_inference_for_single_image(image, graph):
   with graph.as_default():
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       # Get handles to input and output tensors
-      ops = tf.get_default_graph().get_operations()
+      ops = tf.compat.v1.get_default_graph().get_operations()
       all_tensor_names = {output.name for op in ops for output in op.outputs}
       tensor_dict = {}
       for key in [
@@ -57,7 +60,7 @@ def run_inference_for_single_image(image, graph):
       ]:
         tensor_name = key + ':0'
         if tensor_name in all_tensor_names:
-          tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
+          tensor_dict[key] = tf.compat.v1.get_default_graph().get_tensor_by_name(
               tensor_name)
       if 'detection_masks' in tensor_dict:
         # The following processing is only for single image
@@ -74,7 +77,7 @@ def run_inference_for_single_image(image, graph):
         # Follow the convention by adding back the batch dimension
         tensor_dict['detection_masks'] = tf.expand_dims(
             detection_masks_reframed, 0)
-      image_tensor = tf.get_default_graph().get_tensor_by_name('image_tensor:0')
+      image_tensor = tf.compat.v1.get_default_graph().get_tensor_by_name('image_tensor:0')
 
       # Run inference
       output_dict = sess.run(tensor_dict,
@@ -118,5 +121,5 @@ def show_inference(image_path):
   cv2.destroyAllWindows()
 
 # 実行
-show_inference(sys.argv[1])
+show_inference(JPEG_FILE)
 

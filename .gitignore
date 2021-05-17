@@ -137,6 +137,9 @@ tmp*/
 *.jpg
 models/
 inference/
+voc_detect
+hand_detect
 output_training/
 _IR/
 *.zip
+*temp*/
