@@ -8,20 +8,23 @@ Tensorflow1環境でのSSDモデルの転移学習の手順を試してみた。
 
 
 # 転移学習の実行
-tf1_HandDetector.ipynb をGoogle Colaboratory で実行
+tf1_TransferLearning.ipynb をGoogle Colaboratory で実行
 
 # 実行完了をひたすら待つ
-試したときは？時間くらいかかった
+tf1のモデルは収束が遅くて1回のマシン割り当て時間では終了しなかった。何回かに分けて実行してようやく終了。  
 コマンド実行終了した後、ほったらかしておくと
 「あんたロボットと違う？」と聞かれ、ちゃんと答えないと接続切られちゃうので注意。  
 (スタートして寝たり出掛けたりしちゃうと、せっかく学習終了したのに消えちゃうことも)  
+2回目以降の実行は自動的に続きから実行されるので、再割り当て(翌日とかだけど...)したあと、最初から実行すれば良い。  
 
-最初のセルコードセル化して実行し、カレントをGoogleDriveにしておくと接続切られても結果は残ってる。  
-でも、空き容量ないと動かないので注意。  
 
 ## 出力データと生成済みモデルのダウンロード
-output_training_XXXXXXXX_XXXXXX.zip    出力データ
-inference_XXXXXXXX_XXXXXX.zip          生成済みモデル
+hand_detect_tf1/output_training_YYYY_XXXXXXXX_XXXXXX.zip    出力データ
+hand_detect_tf1/hand_detect_YYYY_XXXXXXXX_XXXXXX.zip        生成済みモデル
+VOCのときはhandをvocに読み替え  
+YYYYは学習回数  
+XXXXXXXX_XXXXXXは日時  
+tensorboardで表示したい場合はoutput_trainingが必要だが、要らないならダウンロード不要。  
 
 
 # ローカル環境でのテスト
@@ -50,22 +53,21 @@ cd ../../
 ```
 
 ## 学習結果の確認
-GoogleColab上ではtensorboardの出力がうまく表示されないので、ローカルで表示してみる。  
+ローカルでtensorboardで学習結果等を表示したい場合は以下の手順で。  
+
 出力データを展開してtensorbloadを起動。  
 
 ```
-unzip output_training_XXXXXXXX_XXXXXX.zip
-unzip 
+unzip output_training_YYYY_XXXXXXXX_XXXXXX.zip
 tensorboard --logdir output_training
 ```
 
-ブラウザで``localhost:6006``に接続
+ブラウザで``localhost:6006``に接続(ポート番号は要確認)
 
 ## ダウンロードしたモデルファイルを展開する
 
 ```
-unzip inference_XXXXXXXX_XXXXXX.zip
-unzip 
+unzip hand_detect_YYYY_XXXXXXXX_XXXXXX.zip
 ```
 
 ## テスト
@@ -73,13 +75,14 @@ unzip
 テストディレクトリに移動  
 ```
 cd _test
-sh _test.sh
+sh _hand_test.sh
 ```
 
 または、任意の画像ファイルを指定して以下を実行
+(各ファイルのパスは``_hand_test.sh``を参照)
 
 ```
-python hand_detect.py <<JPEGファイル>>
+python _test.py <<ラベルファイル>> <<FrozenModelファイル>> <<JPEGファイル>>
 ```
 
 # openVINOモデルへの変換
@@ -92,12 +95,17 @@ pyenv local openvino_py37
 ```
 
 ## モデル変換
+
+``convert.sh``を開いて変数``TARGET``を設定。  
+
 ```
 bash convert.sh
 ```
 _IRディレクトリ以下に変換されたモデルが出力される。  
 
 ## テスト
+
+``_test.sh``を開いて変数``TARGET``を設定。  
 
 ```
 bash _test.sh

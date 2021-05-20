@@ -1,13 +1,31 @@
 #!/usr/bin/bash
 
-# hand_detect
-MODEL_NAME=ssd_mobilenet_v2_hand_detect
-CONFIG_FILE=../inference/pipeline.config
-# CONFIG_FILE=./inference/temp.config         # batch_norm_trainable を残したバージョン
-INPUT_MODEL=../inference/frozen_inference_graph.pb
-TRANS_CONFIG=/opt/intel/openvino_2021/deployment_tools/model_optimizer/extensions/front/tf/ssd_support_api_v1.15.json
-# TRANS_CONFIG=" --transformations_config=./ssd_v2_support.json"
-# TRANS_CONFIG=" --tensorflow_use_custom_operations_config=./ssd_v2_support.json"
+TARGET=HAND
+# TARGET=VOC
+
+# pyenvでpythonのバージョンを切り替えたときの問題の対策  ==================================
+## 現在のpythonのバージョン取得
+# TMP_PYVER=`python -V |  sed -e "s/^.*\(3.[0-9]\{1,\}\).*$/\1/g"`
+TMP_PYVER=`python -c "import sys; v = sys.version_info; print(f'{v[0]}.{v[1]}')"`
+## PYTHONPATHの該当箇所を置換
+export PYTHONPATH=`echo $PYTHONPATH  | sed -e "s/\/python3\.[0-9]\{1,\}/\/python${TMP_PYVER}/g"`
+# =========================================================================================
+
+if [ "${TARGET}" == "HAND" ]; then
+    # hand_detect
+    MODEL_NAME=ssd_mobilenet_v2_hand_detect
+    CONFIG_FILE=../hand_detect/pipeline.config
+    INPUT_MODEL=../hand_detect/frozen_inference_graph.pb
+    LABELS_FILE=../hand_detect/label_map.txt
+    TRANS_CONFIG=/opt/intel/openvino_2021/deployment_tools/model_optimizer/extensions/front/tf/ssd_support_api_v1.15.json
+else
+    # voc_detect
+    MODEL_NAME=ssd_mobilenet_v2_hand_detect
+    CONFIG_FILE=../voc_detect/pipeline.config
+    INPUT_MODEL=../voc_detect/frozen_inference_graph.pb
+    LABELS_FILE=../voc_detect/label_map.txt
+    TRANS_CONFIG=/opt/intel/openvino_2021/deployment_tools/model_optimizer/extensions/front/tf/ssd_support_api_v1.15.json
+fi
 
 OPTIONS=" --framework=tf"
 # OPTIONS+=" --log_level=DEBUG"
@@ -25,13 +43,7 @@ OPTIONS+=" --output_dir=./_IR/${MODEL_NAME}/FP16"
 # echo ${OPTIONS}
 /opt/intel/openvino_2021/deployment_tools/model_optimizer/mo.py ${OPTIONS}
 
-
-<<_COMMENT_
---tensorflow_object_detection_api_pipeline_config=./inference/pipeline.config \
---model_name=${MODEL_NAME} \
---input_model=./inference/frozen_inference_graph.pb \
---output_dir=./_IR/${MODEL_NAME}/FP16 
-
-# --transformations_config=/opt/intel/openvino_2021/deployment_tools/model_optimizer/extensions/front/tf/ssd_v2_support.json \
-
-_COMMENT_
+# ラベルファイルもコピー
+if [ -f ${LABELS_FILE} ]; then
+    cp ${LABELS_FILE} ./_IR/${MODEL_NAME}/FP16/${MODEL_NAME}.labels
+fi
